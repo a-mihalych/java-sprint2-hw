@@ -3,14 +3,13 @@ import java.util.HashMap;
 
 public class MonthlyReport {
 
-    public final int YEAR;
     // Integer: месяц (1 - 12)
-    // ArrayList: состоит из массивов на 4 строки (String[4]) - это одна запись (строка) из файла
-    // [0] название товара, [1] true/false (трата/доход), [2] количество товара, [3] стоимость единицы товара
-    private HashMap<Integer, ArrayList<String[]>> monthlyReport = new HashMap<>();
+    // ArrayList: состоит из объектов типа OperationOfMonth
+    private HashMap<Integer, ArrayList<OperationOfMonth>> monthlyReport = new HashMap<>();
 
-    public MonthlyReport(int year) {
-        this.YEAR = year;
+    // пустой ли HashMap
+    public boolean isEmptyHashMap() {
+        return monthlyReport.isEmpty();
     }
 
     // проверка наличия ключа в HashMap
@@ -18,25 +17,31 @@ public class MonthlyReport {
         return monthlyReport.containsKey(key);
     }
 
-    // добавляет в HashMap данные из месячного файла
+    // добавляет в HashMap monthlyReport данные из месячного файла
     public void setReportMonth(int month, String fileContents) {
         String[] reportAll = fileContents.split("\n");
         String[] reportLine;
-        ArrayList<String[]> reportLines = new ArrayList<>();
+        boolean isExpense;
+        int quantity;
+        int sumOfOne;
+        ArrayList<OperationOfMonth> reportLines = new ArrayList<>();
         for (int i = 1; i < reportAll.length; i++) {
             reportLine = reportAll[i].split(",");
-            reportLines.add(reportLine);
+            isExpense = Boolean.parseBoolean(reportLine[1]);
+            quantity = Integer.parseInt(reportLine[2]);
+            sumOfOne = Integer.parseInt(reportLine[3]);
+            reportLines.add(new OperationOfMonth(reportLine[0], isExpense, quantity, sumOfOne));
         }
         monthlyReport.put(month, reportLines);
     }
 
     // суммирует траты (isExpense - "true") или прибыль (isExpense - "false") за месяц (month)
-    public int sum(int month, String isExpense) {
+    public int sum(int month, boolean isExpense) {
         int result = 0;
-        ArrayList<String[]> reportLines = monthlyReport.get(month);
-        for (String[] reportLine : reportLines) {
-            if (reportLine[1].equals(isExpense)) {
-                result += (Integer.parseInt(reportLine[2]) * Integer.parseInt(reportLine[3]));
+        ArrayList<OperationOfMonth> reportLines = monthlyReport.get(month);
+        for (OperationOfMonth reportLine : reportLines) {
+            if (reportLine.isExpense() == isExpense) {
+                result += reportLine.getQuantity() * reportLine.getSumOfOne();
             }
         }
         return result;
@@ -45,27 +50,27 @@ public class MonthlyReport {
     // месячный отчёт (для меню 4)
     public String monthlyReports() {
         String result = "";
-        ArrayList<String[]> reportLines;
+        ArrayList<OperationOfMonth> reportLines;
         String itemNameExpense = "";
         String itemNameProfit = "";
         int expense;
         int profit;
-        int sum;
+        int sumMax;
         for (Integer month : monthlyReport.keySet()) {
             reportLines = monthlyReport.get(month);
             expense = 0;
             profit = 0;
-            for (String[] reportLine : reportLines) {
-                sum = Integer.parseInt(reportLine[2]) * Integer.parseInt(reportLine[3]);
-                if (reportLine[1].equals("TRUE")) {
-                    if (sum > expense) {
-                        expense = sum;
-                        itemNameExpense = reportLine[0];
+            for (OperationOfMonth reportLine : reportLines) {
+                sumMax = reportLine.getQuantity() * reportLine.getSumOfOne();
+                if (reportLine.isExpense()) {
+                    if (sumMax > expense) {
+                        expense = sumMax;
+                        itemNameExpense = reportLine.getItemName();
                     }
                 } else {
-                    if (sum > profit) {
-                        profit = sum;
-                        itemNameProfit = reportLine[0];
+                    if (sumMax > profit) {
+                        profit = sumMax;
+                        itemNameProfit = reportLine.getItemName();
                     }
                 }
             }

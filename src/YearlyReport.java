@@ -1,29 +1,35 @@
+import java.util.HashMap;
+
 public class YearlyReport {
 
-    public final int YEAR;
+    private int year;
     public static final String[] MONTHS = {"Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
                                           "Июль", "Август", "Сентябрь", "Октябрь", "Нояюрь", "Декабрь"};
-    private int[] yearlyReport = new int[24];   // на каждый месяц две суммы, первая - расход, вторая - доход
+    // Integer: месяц (1 - 12)
+    // ResultOfMonth: объект с полями: expense и profit
+    private HashMap<Integer, ResultOfMonth> yearlyReport = new HashMap<>();
 
-    public YearlyReport(int year) {
-        this.YEAR = year;
+    // пустой ли HashMap
+    public boolean isEmptyHashMap() {
+        return yearlyReport.isEmpty();
     }
 
-    // добавляет в маасив yearlyReport траты и прибыли
-    public void setReportMonth(String fileContents) {
+    // добавляет год, а в HashMap yearlyReport траты и прибыли
+    public void setReportMonth(String fileContents, int year) {
+        this.year = year;
         // рекомендованный в техническои задании System.lineSeparator(),
         // в windows, строку на части не разбивает, в split использую "\n"
         String[] reportAll = fileContents.split("\n");
-        // два массива для для одного месяца? траты и прибыль
+        // два массива для одного месяца, траты и прибыль
         String[] reportLine1;
         String[] reportLine2;
         int expense;
         int profit;
-        int index;  // для массива yearlyReport (месяц - 1)
+        int month;
         for (int i = 1; i < reportAll.length; i += 2) {
             reportLine1 = reportAll[i].split(",");
             reportLine2 = reportAll[i + 1].split(",");
-            index = Integer.parseInt(reportLine1[0]) - 1;
+            month = Integer.parseInt(reportLine1[0]);
             if (Boolean.parseBoolean(reportLine1[2])) {
                 expense = Integer.parseInt(reportLine1[1]);
                 profit = Integer.parseInt(reportLine2[1]);
@@ -31,8 +37,7 @@ public class YearlyReport {
                 profit = Integer.parseInt(reportLine1[1]);
                 expense = Integer.parseInt(reportLine2[1]);
             }
-            yearlyReport[index * 2] = expense;
-            yearlyReport[index * 2 + 1] = profit;
+            yearlyReport.put(month, new ResultOfMonth(expense, profit));
         }
     }
 
@@ -40,14 +45,13 @@ public class YearlyReport {
     public String dataReconciliation(MonthlyReport monthlyReport) {
         String result = "\n";
         int month = 1;
-        int index;
         int expense;
         int profit;
-        while (monthlyReport.isKey(month)) {
-            index = (month - 1) * 2;
-            expense = monthlyReport.sum(month, "TRUE");
-            profit = monthlyReport.sum(month, "FALSE");
-            if ((yearlyReport[index] == expense) && (yearlyReport[index + 1] == profit)) {
+        while (monthlyReport.isKey(month) && yearlyReport.containsKey(month)) {
+            expense = monthlyReport.sum(month, true);
+            profit = monthlyReport.sum(month, false);
+            if ((yearlyReport.get(month).getExpense() == expense) &&
+                (yearlyReport.get(month).getProfit() == profit)) {
                 result += ("Сверка за " + MONTHS[month - 1] + " завершилась успешно.\n");
             } else {
                 result += ("Ошибка! Месяц " + MONTHS[month - 1] + ".\n");
@@ -59,23 +63,20 @@ public class YearlyReport {
 
     // годовой отчёт (для меню 5)
     public String yearlyReport() {
-        String result = "\n- Отчёт за " + YEAR + " год -\n\n";
-        int numberOfMonths = 0;
+        String result = "\n- Отчёт за " + year + " год -\n\n";
         int profitPerMonth;
-        while ((numberOfMonths < 12) &&
-               ((yearlyReport[numberOfMonths * 2] != 0) || (yearlyReport[numberOfMonths * 2 + 1] != 0))) {
-            profitPerMonth = yearlyReport[numberOfMonths * 2 + 1] - yearlyReport[numberOfMonths * 2];
-            result += ("Прибыль за " + MONTHS[numberOfMonths] + ": " + profitPerMonth + "\n");
-            numberOfMonths++;
-        }
+        ResultOfMonth resultOfMonth;
         int profit = 0;
         int expense = 0;
-        for (int i = 0; i < numberOfMonths; i++) {
-            expense += yearlyReport[i * 2];
-            profit +=  yearlyReport[i * 2 + 1];
+        for (Integer key : yearlyReport.keySet()) {
+            resultOfMonth = yearlyReport.get(key);
+            expense += resultOfMonth.getExpense();
+            profit +=  resultOfMonth.getProfit();
+            profitPerMonth = resultOfMonth.getProfit() - resultOfMonth.getExpense();
+            result += ("Прибыль за " + MONTHS[key - 1] + ": " + profitPerMonth + "\n");
         }
-        result += ("Средний расход составил: " + (expense / numberOfMonths) + "\n");
-        result += ("Средний доход составил: " + (profit / numberOfMonths) + "\n");
+        result += ("Средний расход составил: " + (expense / yearlyReport.size()) + "\n");
+        result += ("Средний доход составил: " + (profit / yearlyReport.size()) + "\n");
         return result;
     }
 }
